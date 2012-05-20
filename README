@@ -1,0 +1,20 @@
+sss - simple scripting for scala
+
+sss lets you write simple standalone scripts in Scala that incorporate
+Maven dependencies.  For example:
+
+
+helloworld.sss
+#!/usr/bin/sss
+
+@library("slf4j")
+@library("org.scalaz" %% "scalaz" % "0.12")
+
+import slf4s._
+
+object Hello extends App {
+  log("hello world")
+}
+
+You can then execute helloworld.sss by making it executable and entering ./helloworld.sss
+at the 
