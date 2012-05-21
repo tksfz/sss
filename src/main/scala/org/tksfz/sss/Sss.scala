@@ -1,7 +1,16 @@
 package org.tksfz.sss
 
-class Sss {
+import com.twitter.util.Eval
+import java.io.File
 
+class Sss(
+  scriptFilename: String
+) {
+  def run = {
+    val eval = new Eval
+    eval(new File(scriptFilename))
+    // strip the #
+  }
 }
 
 object Sss {
