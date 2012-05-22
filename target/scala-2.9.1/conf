@@ -1,0 +1,58 @@
+-injars      sss_2.9.1-0.1.jar
+-injars      /home/thom/.sbt/boot/scala-2.9.1/lib/scala-library.jar
+-injars      /home/thom/.sbt/boot/scala-2.9.1/lib/scala-compiler.jar
+-injars      /home/thom/.ivy2/cache/com.twitter/util-eval_2.9.1/jars/util-eval_2.9.1-4.0.1.jar
+-injars      /home/thom/.ivy2/cache/com.twitter/util-core_2.9.1/jars/util-core_2.9.1-4.0.1.jar
+-outjars     out.jar
+-libraryjars /usr/lib/jvm/java-6-openjdk/jre/lib/rt.jar
+
+-dontwarn scala.**
+-dontwarn com.twitter.concurrent.*
+
+-dontshrink
+-dontoptimize
+-dontobfuscate
+
+-verbose
+
+-keepclasseswithmembers public class * {
+    public static void main(java.lang.String[]);
+}
+
+-keep class scala.tools.nsc.Interpreter
+
+-keep class * implements org.xml.sax.EntityResolver
+
+-keep class com.twitter.concurrent.Broker
+-keep class com.twitter.concurrent.Broker$Quiet
+
+-keep class scala.tools.nsc.interpreter.JLineReader$JLineConsoleReader
+-keep class scala.tools.nsc.interpreter.ConsoleReaderHelper
+
+-keepclassmembers class * {
+    ** MODULE$;
+}
+
+-keepclassmembernames class scala.concurrent.forkjoin.ForkJoinPool {
+    long eventCount;
+    int  workerCounts;
+    int  runControl;
+    scala.concurrent.forkjoin.ForkJoinPool$WaitQueueNode syncStack;
+    scala.concurrent.forkjoin.ForkJoinPool$WaitQueueNode spareStack;
+}
+
+-keepclassmembernames class scala.concurrent.forkjoin.ForkJoinWorkerThread {
+    int base;
+    int sp;
+    int runState;
+}
+
+-keepclassmembernames class scala.concurrent.forkjoin.ForkJoinTask {
+    int status;
+}
+
+-keepclassmembernames class scala.concurrent.forkjoin.LinkedTransferQueue {
+    scala.concurrent.forkjoin.LinkedTransferQueue$PaddedAtomicReference head;
+    scala.concurrent.forkjoin.LinkedTransferQueue$PaddedAtomicReference tail;
+    scala.concurrent.forkjoin.LinkedTransferQueue$PaddedAtomicReference cleanMe;
+}
