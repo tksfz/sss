@@ -1,6 +1,5 @@
 package org.tksfz.sss
 
-import com.twitter.util.Eval
 import java.io.File
 import scala.io.Source
 import org.apache.ivy.Ivy
