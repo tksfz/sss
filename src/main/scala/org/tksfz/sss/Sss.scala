@@ -10,6 +10,8 @@ import org.apache.ivy.core.resolve.ResolveOptions
 import org.apache.ivy.core.module.descriptor.DefaultDependencyDescriptor
 import org.apache.ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor
 import org.apache.ivy.core.retrieve.RetrieveOptions
+import org.apache.ivy.core.retrieve.RetrieveReport
+import org.apache.ivy.core.report.ResolveReport
 
 class Sss(
   scriptFilename: String
@@ -20,10 +22,11 @@ class Sss(
     // strip the #
     scriptLines = scriptLines.dropWhile { _.startsWith("#") }
     val script = scriptLines.mkString("\n")
-    val eval = new Eval
+    val rr = ivy
+    val libs: List[String] = rr.getAllArtifactsReports map { _.getLocalFile.getPath } toList 
+    val eval = new Eval(libs)
     eval(script)
     
-    ivy
   }
   
   def ivy = {
@@ -35,11 +38,24 @@ class Sss(
     //val dad = new DefaultDependencyArtifactDescriptor
     //ddd.addDependencyArtifact(x$1, x$2)
     md.addDependency(ddd)
+    val ddd2 = new DefaultDependencyDescriptor(ModuleRevisionId.newInstance("com.twitter", "scalding_2.9.1", "0.5.3"), true)
+    ddd2.addDependencyConfiguration(ModuleDescriptor.DEFAULT_CONFIGURATION, ModuleDescriptor.DEFAULT_CONFIGURATION)
+    md.addDependency(ddd2)
     val ro = new ResolveOptions
     val resolveReport = ivy.resolve(md, ro)
+    getArtifactMap(resolveReport)
     println(resolveReport)
     val rr = ivy.retrieve(md.getModuleRevisionId, "lib/[conf]/[artifact].[ext]", new RetrieveOptions)
     println(rr)
+    resolveReport
+  }
+  
+  def getArtifactMap(rr: ResolveReport) = {
+    println(rr.getArtifacts)
+    println(rr.getAllArtifactsReports)
+    for(afr <- rr.getAllArtifactsReports) {
+      println(afr.getArtifact + " " + afr.getLocalFile)
+    }
   }
 }
 

@@ -60,12 +60,18 @@ object Eval extends Eval {
  * - contruct an instance of that class
  * - return the result of `apply()`
  */
-class Eval(target: Option[File]) {
+class Eval(
+    target: Option[File],
+    dependPath: List[String]) {
   /**
    * empty constructor for backwards compatibility
    */
   def this() {
-    this(None)
+    this(None, Nil)
+  }
+  
+  def this(dependPath: List[String]) {
+    this(None, dependPath)
   }
 
   import Eval.jvmId
@@ -432,7 +438,7 @@ class Eval(target: Option[File]) {
 
     val pathList = compilerPath ::: libPath
     settings.bootclasspath.value = pathList.mkString(File.pathSeparator)
-    settings.classpath.value = (pathList ::: impliedClassPath).mkString(File.pathSeparator)
+    settings.classpath.value = (pathList ::: impliedClassPath ::: dependPath).mkString(File.pathSeparator)
 
     val reporter = new AbstractReporter {
       val settings = StringCompiler.this.settings

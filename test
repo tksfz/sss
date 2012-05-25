@@ -1,2 +1,6 @@
 #!/home/thom/sss/sss2
 println("hello")
+
+import org.slf4j.Logger
+
+println(classOf[Logger])
