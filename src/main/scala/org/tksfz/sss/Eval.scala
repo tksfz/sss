@@ -32,6 +32,7 @@ import scala.tools.nsc.io.{AbstractFile, VirtualDirectory}
 import scala.tools.nsc.reporters.AbstractReporter
 import scala.tools.nsc.util.{BatchSourceFile, Position}
 import scala.util.matching.Regex
+import java.net.URL
 
 /**
  * Evaluate a file or string and return the result.
@@ -477,6 +478,7 @@ class Eval(
      * Class loader for finding classes compiled by this StringCompiler.
      * After each reset, this class loader will not be able to find old compiled classes.
      */
+    var dependClassLoader = newURLClassLoader
     var classLoader = new AbstractFileClassLoader(target, this.getClass.getClassLoader)
 
     def reset() {
@@ -494,7 +496,13 @@ class Eval(
       }
       cache.clear()
       reporter.reset
-      classLoader = new AbstractFileClassLoader(target, this.getClass.getClassLoader)
+      classLoader = new AbstractFileClassLoader(target, dependClassLoader)
+    }
+    
+    def newURLClassLoader() = {
+      val urls: Array[URL] = dependPath map { path => new URL("file:" + path) } toArray 
+      val cl = new URLClassLoader(urls, this.getClass.getClassLoader)
+      cl
     }
 
     object Debug {
