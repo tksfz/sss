@@ -41,6 +41,9 @@ class Sss(
     val ddd2 = new DefaultDependencyDescriptor(ModuleRevisionId.newInstance("com.twitter", "scalding_2.9.1", "0.5.3"), true)
     ddd2.addDependencyConfiguration(ModuleDescriptor.DEFAULT_CONFIGURATION, ModuleDescriptor.DEFAULT_CONFIGURATION)
     md.addDependency(ddd2)
+    val ddd3 = new DefaultDependencyDescriptor(ModuleRevisionId.newInstance("org.slf4j", "slf4j-simple", "1.6.4"), true)
+    ddd3.addDependencyConfiguration(ModuleDescriptor.DEFAULT_CONFIGURATION, ModuleDescriptor.DEFAULT_CONFIGURATION)
+    md.addDependency(ddd3)
     val ro = new ResolveOptions
     val resolveReport = ivy.resolve(md, ro)
     getArtifactMap(resolveReport)

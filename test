@@ -1,6 +1,7 @@
 #!/home/thom/sss/sss2
 println("hello")
 
-import org.slf4j.Logger
+import org.slf4j._
 
-println(classOf[Logger])
+val log = LoggerFactory.getLogger(classOf[Logger])
+log.info("hello")
