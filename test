@@ -1,7 +1,19 @@
 #!/home/thom/sss/sss2
-println("hello")
+@depends("org.slf4j" % "slf4j-api" % "1.6.4")
+@depends("org.slf4j" % "slf4j-simple" % "1.6.4")
+@depends("org.rogach" %% "scallop" % "0.3.9")
+
+println("hello world")
 
 import org.slf4j._
 
 val log = LoggerFactory.getLogger(classOf[Logger])
-log.info("hello")
+log.info("hello log")
+
+import org.rogach.scallop._
+
+object Conf extends ScallopConf(List("--apples", "3")) {
+  val apples = opt[Int]("apples", required = true)
+}
+
+println(Conf.apples())
