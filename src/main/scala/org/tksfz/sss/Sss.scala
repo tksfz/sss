@@ -21,42 +21,16 @@ class Sss(
 ) {
   
   def run {
-    var scriptLines = Source.fromFile(scriptFilename).getLines
-    // strip the #
-    scriptLines = scriptLines dropWhile { _ startsWith "#" }
-    
-    // return pair with list and new script
-    val depends = extractDepends(scriptLines)
+    val alldeps = AllSssWithDeps(new File(scriptFilename))
     //println(depends)
-    println(getScalaVersion)
+    println(alldeps)
     
-    scriptLines = scriptLines dropWhile { _ startsWith "@depends" }
-    
+    val scriptLines = alldeps.sssfiles(0)._2.newcontents
     val script = scriptLines mkString "\n"
-    val rr = ivy(depends)
+    val rr = ivy(alldeps.getAllModules)
     val libs: List[String] = rr.getAllArtifactsReports map { _.getLocalFile.getPath } toList 
     val eval = new Eval(libs)
     eval(script)
-  }
-  
-  def getScalaVersion = scala.tools.nsc.Properties.releaseVersion
-  
-  def extractDepends(script: Iterator[String]): List[ModuleID] = {
-    val dependLines = script takeWhile { _ startsWith "@depends" }
-    val mvnArtifactRegex = """@depends\s*\(\s*"([^"]*)"\s*%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
-    val sbtArtifactRegex = """@depends\s*\(\s*"([^"]*)"\s*%%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
-    val depends: List[ModuleID] = dependLines map {
-      dependLine =>
-        dependLine match {
-          case mvnArtifactRegex(groupId, artifactId, revision) => ModuleID(groupId, artifactId, revision)
-          case sbtArtifactRegex(groupId, artifactId, revision) => ModuleID(groupId, mkScalaArtifactId(artifactId), revision)
-        }        
-    } toList;
-    depends
-  }
-  
-  def mkScalaArtifactId(artifactId: String) = {
-    artifactId + "_" + getScalaVersion.get
   }
   
   def ivy(depends: Traversable[ModuleID]) = {
