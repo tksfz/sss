@@ -68,7 +68,7 @@ class AllSssWithDeps(
 object AllSssWithDeps {
   def apply(rootfile: File) = {
     var unprocessedFiles = mutable.HashSet(rootfile)
-    var map: Map[File, ContentsWithDeps] = new mutable.LinkedHashMap
+    var filesToContents: Map[File, ContentsWithDeps] = new mutable.LinkedHashMap
     val proc = new SssDepsProcessor
     
     var isRoot = true
@@ -77,18 +77,26 @@ object AllSssWithDeps {
       for(file <- unprocessedFiles) {
         val deps = proc.process(file, isRoot)
         isRoot = false
-        map += (file -> deps)
+        filesToContents += (file -> deps)
         for(newfile <- deps.sssfiles) {
-          if (!map.contains(newfile) && !unprocessedFiles.contains(newfile) && !newUnprocessedFiles.contains(newfile)) {
+          if (!filesToContents.contains(newfile) && !unprocessedFiles.contains(newfile) && !newUnprocessedFiles.contains(newfile)) {
             newUnprocessedFiles += newfile
           }
         }
       }
       unprocessedFiles = newUnprocessedFiles
     }
-    new AllSssWithDeps(nel((rootfile -> map(rootfile)), map.toList.tail))
+    val tailClassNames = filesToContents.values.tail map { _.className.get }
+    var rootContents = filesToContents(rootfile)
+    rootContents = rootContents.copy(newcontents = getRootImports(tailClassNames) + "\n" + rootContents.newcontents)
+    new AllSssWithDeps(nel((rootfile -> rootContents), filesToContents.toList.tail))
+  }
+
+  def getRootImports(classNames: Iterable[String]) = {
+    (classNames map { "import " + _ + "._" }) mkString "\n"
   }
 }
+
 
 /**
  * Processes a sss file to extract dependencies
@@ -204,7 +212,7 @@ trait PreprocessorResult {
 
 case class ContentsWithDeps(
     override val newcontents: String,
-    val className: Option[String],
+    className: Option[String],
     val modules: List[ModuleID],
     val sssfiles: List[File]
 ) extends PreprocessorResult {

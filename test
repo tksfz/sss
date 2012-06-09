@@ -20,3 +20,5 @@ object Conf extends ScallopConf(List("--apples", "3")) {
 }
 
 println(Conf.apples())
+
+println(getUrl("http://www.yahoo.com"))
