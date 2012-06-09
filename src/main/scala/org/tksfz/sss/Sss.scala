@@ -20,28 +20,22 @@ class Sss(
   scriptFilename: String
 ) {
   
-  def run {
+  def run[T] {
     val alldeps = AllSssWithDeps(new File(scriptFilename))
-    //println(depends)
-    println(alldeps)
     
-    val scriptLines = alldeps.sssfiles(0)._2.newcontents
-    val script = scriptLines mkString "\n"
     val rr = ivy(alldeps.getAllModules)
     val libs: List[String] = rr.getAllArtifactsReports map { _.getLocalFile.getPath } toList 
     val eval = new Eval(libs)
-    eval(script)
+    val cls = eval.compile(alldeps.getAllSssFileContents.list, alldeps.getRootClassName, true)
+    cls.getConstructor().newInstance().asInstanceOf[() => Any].apply().asInstanceOf[T]
+    //eval(script)
   }
   
   def ivy(depends: Traversable[ModuleID]) = {
     val ivy = Ivy.newInstance
-    //ivy.getLoggerEngine.pushLogger(new DefaultMessageLogger(Message.MSG_ERR))
+    ivy.getLoggerEngine.pushLogger(new DefaultMessageLogger(Message.MSG_ERR))
     ivy.configureDefault
     val md = DefaultModuleDescriptor.newDefaultInstance(ModuleRevisionId.newInstance("org.tksfz", "somescript", "0.1"))
-    /*
-    val dds = toDDD(Seq(ModuleID("org.slf4j", "slf4j-api", "1.6.4"),
-        ModuleID("com.twitter", "scalding_2.9.1", "0.5.3"),
-        ModuleID("org.slf4j", "slf4j-simple", "1.6.4"))) */
     val dds = toDDD(depends)
     addDeps(md, dds)
     val ro = new ResolveOptions

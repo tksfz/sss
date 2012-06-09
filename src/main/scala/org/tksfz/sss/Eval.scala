@@ -33,6 +33,7 @@ import scala.tools.nsc.reporters.AbstractReporter
 import scala.tools.nsc.util.{BatchSourceFile, Position}
 import scala.util.matching.Regex
 import java.net.URL
+import scala.tools.nsc.io.VirtualFile
 
 /**
  * Evaluate a file or string and return the result.
@@ -203,7 +204,28 @@ class Eval(
     val cls = compiler(wrapCodeInClass(className, code), className, resetState)
     cls.getConstructor().newInstance().asInstanceOf[() => Any].apply().asInstanceOf[T]
   }
+  
+  def apply[T](codes: List[(File, String)], resetState: Boolean): T = {
+    val classNames = codes map { code =>
+      val sourceChecksum = uniqueId(code._2, None)
+      val cleanBaseName = fileToClassName(code._1)
+      val className = "Evaluator__%s_%s".format(cleanBaseName, sourceChecksum)
+      className
+    }
+    val codes2 = (codes zip classNames) map { codeAndClassName =>
+      (codeAndClassName._1._1, wrapCodeInClass(codeAndClassName._2, codeAndClassName._1._2)) }
+    val cls = compiler(codes2, classNames(0), resetState)
+    cls.getConstructor().newInstance().asInstanceOf[() => Any].apply().asInstanceOf[T]
+    // TODO: extends App etc.
+  }
 
+  def compile[T](codes: List[(File, String)], className: String, resetState: Boolean): Class[_] = {
+    val cls = compiler(codes, className, resetState)
+    cls
+    // TODO: extends App etc.
+  }
+
+  
   /**
    * converts the given file to evaluable source.
    * delegates to toSource(code: String)
@@ -304,7 +326,7 @@ class Eval(
     "  }\n" +
     "}\n"
   }
-
+  
   /*
    * For a given FQ classname, trick the resource finder into telling us the containing jar.
    */
@@ -551,6 +573,20 @@ class Eval(
         throw new CompilerException(reporter.messages.toList)
       }
     }
+    
+    def apply(codes: List[(File, String)]) {
+      val compiler = new global.Run
+      val sourceFiles = codes map { code =>
+        val vf = new VirtualFile("(inline: " + code._1 + ")") {
+          override def container: AbstractFile = new VirtualFile("whatever")
+        }
+        new BatchSourceFile(vf, code._2)
+        }
+      compiler.compileSources(sourceFiles)
+      if (reporter.hasErrors || reporter.WARNING.count > 0) {
+        throw new CompilerException(reporter.messages.toList)
+      }
+    }
 
     /**
      * Compile a new class, load it, and return it. Thread-safe.
@@ -560,6 +596,16 @@ class Eval(
         if (resetState) reset()
         findClass(className).getOrElse {
           apply(code)
+          findClass(className).get
+        }
+      }
+    }
+    
+    def apply(codes: List[(File, String)], className: String, resetState: Boolean): Class[_] = {
+      synchronized {
+        if (resetState) reset()
+        findClass(className).getOrElse {
+          apply(codes)
           findClass(className).get
         }
       }
