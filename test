@@ -15,10 +15,10 @@ log.info("hello log")
 
 import org.rogach.scallop._
 
-object Conf extends ScallopConf(List("--apples", "3")) {
+object Conf extends ScallopConf(args) {
   val apples = opt[Int]("apples", required = true)
 }
 
 println(Conf.apples())
 
-println(getUrl("http://www.yahoo.com"))
+//println(getUrl("http://www.yahoo.com"))

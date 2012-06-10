@@ -134,7 +134,7 @@ class SssDepsProcessor {
   }
   
   def wrapScript(className: String, script: String, isRoot: Boolean): String = {
-    if (isRoot) wrapCodeInClass(className, script) else wrapCodeInObject(className, script)
+    if (isRoot) wrapCodeInApp(className, script) else wrapCodeInObject(className, script)
   }
   
   def mkscript(file: File, script: String) = {
@@ -185,20 +185,13 @@ class SssDepsProcessor {
   private def getScalaVersion = scala.tools.nsc.Properties.releaseVersion
 
   private def wrapCodeInObject(className: String, code: String) = {
-    "object " + className + " { " + code + "}"
+    "object " + className + " { " + code + "\n}"
   }
   
-    /*
-   * Wrap source code in a new class with an apply method.
-   */
-  private def wrapCodeInClass(className: String, code: String) = {
-    "class " + className + " extends (() => Any) {\n" +
-    "  def apply() = {\n" +
-    code + "\n" +
-    "  }\n" +
-    "}\n"
+  private def wrapCodeInApp(className: String, code: String) = {
+    "class " + className + " extends App { " + code + "\n}"
   }
-
+  
 }
 
 trait PreprocessorResult {
