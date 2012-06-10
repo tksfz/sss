@@ -34,8 +34,8 @@ class AllSssWithDeps(
   
   def getRootClassName = sssfiles.head.className
   
-  def getAllSssFileContents: NonEmptyList[(File, String)] = {
-    sssfiles map { sssfile => (sssfile.file, sssfile.contents) }
+  def getAllSssFileContents: List[(File, String)] = {
+    sssfiles map { sssfile => (sssfile.file, sssfile.contents) } list
   }
   
   override def toString = sssfiles.toString

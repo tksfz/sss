@@ -17,22 +17,19 @@ import org.apache.ivy.util.DefaultMessageLogger
 import org.apache.ivy.util.Message
 
 class Sss(
-    scriptFilename: String
-) {
+    scriptFilename: String) {
   
-  def run[T](args: Array[String]) {
+  def run(args: Array[String]) {
     val alldeps = AllSssWithDeps(new File(scriptFilename))
     
     val rr = ivy(alldeps.getAllModules)
     val libs: List[String] = rr.getAllArtifactsReports map { _.getLocalFile.getPath } toList 
     val eval = new Eval(libs)
-    val cls = eval.compile(alldeps.getAllSssFileContents.list, alldeps.getRootClassName, true)
+    val cls = eval.compile(alldeps.getAllSssFileContents, alldeps.getRootClassName, true)
     runAppClass(cls, args)
   }
   
-  private def runAppClass(clazz: Class[_], args: Array[String]) = {
-    clazz.getConstructor().newInstance().asInstanceOf[App].main(args)
-  }
+  private def runAppClass(clazz: Class[_], args: Array[String]) = clazz.getConstructor().newInstance().asInstanceOf[App].main(args)
   
   def ivy(depends: Traversable[ModuleID]) = {
     val ivy = Ivy.newInstance
@@ -66,7 +63,6 @@ class Sss(
 
 object Sss {
   def main(args: Array[String]) {
-    // TODO: do something with the rest of the command-line arguments (pass them down)
     val scriptFilename = args(0)
     new Sss(scriptFilename).run(args.tail)    
   }

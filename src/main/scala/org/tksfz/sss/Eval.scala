@@ -16,8 +16,6 @@ package org.tksfz.sss
  * limitations under the License.
  */
 
-import _root_.com.twitter.io.StreamIO
-import _root_.com.twitter.conversions.string._
 import java.io._
 import java.math.BigInteger
 import java.net.URLClassLoader
@@ -113,41 +111,6 @@ class Eval(
   }
 
   /**
-   * val i: Int = new Eval()(new File("..."))
-   */
-  def apply[T](files: File*): T = {
-    if (target.isDefined) {
-      val targetDir = target.get
-      val unprocessedSource = files.map { scala.io.Source.fromFile(_).mkString }.mkString("\n")
-      val processed = unprocessedSource
-      val sourceChecksum = uniqueId(processed, None)
-      val checksumFile = new File(targetDir, "checksum")
-      val lastChecksum = if (checksumFile.exists) {
-        Source.fromFile(checksumFile).getLines.take(1).toList.head
-      } else {
-        -1
-      }
-
-      if (lastChecksum != sourceChecksum) {
-        compiler.reset()
-        writeChecksum(sourceChecksum, checksumFile)
-      }
-
-      // why all this nonsense? Well.
-      // 1) We want to know which file the eval'd code came from
-      // 2) But sometimes files have characters that aren't valid in Java/Scala identifiers
-      // 3) And sometimes files with the same name live in different subdirectories
-      // so, clean it hash it and slap it on the end of Evaluator
-      val cleanBaseName = fileToClassName(files(0))
-      val className = "Evaluator__%s_%s".format(
-        cleanBaseName, sourceChecksum)
-      applyProcessed(className, processed, false)
-    } else {
-      apply(files.map { scala.io.Source.fromFile(_).mkString }.mkString("\n"), true)
-    }
-  }
-
-  /**
    * val i: Int = new Eval()(getClass.getResourceAsStream("..."))
    */
   def apply[T](stream: InputStream): T = {
@@ -174,20 +137,6 @@ class Eval(
     cls.getConstructor().newInstance().asInstanceOf[() => Any].apply().asInstanceOf[T]
   }
   
-  def apply[T](codes: List[(File, String)], resetState: Boolean): T = {
-    val classNames = codes map { code =>
-      val sourceChecksum = uniqueId(code._2, None)
-      val cleanBaseName = fileToClassName(code._1)
-      val className = "Evaluator__%s_%s".format(cleanBaseName, sourceChecksum)
-      className
-    }
-    val codes2 = (codes zip classNames) map { codeAndClassName =>
-      (codeAndClassName._1._1, wrapCodeInClass(codeAndClassName._2, codeAndClassName._1._2)) }
-    val cls = compiler(codes2, classNames(0), resetState)
-    cls.getConstructor().newInstance().asInstanceOf[() => Any].apply().asInstanceOf[T]
-    // TODO: extends App etc.
-  }
-
   def compile[T](codes: List[(File, String)], className: String, resetState: Boolean): Class[_] = {
     val cls = compiler(codes, className, resetState)
     cls
@@ -247,25 +196,6 @@ class Eval(
     idOpt match {
       case Some(id) => sha + "_" + jvmId
       case _ => sha
-    }
-  }
-
-  private[sss] def fileToClassName(f: File): String = {
-    // HOPE YOU'RE HAPPY GUYS!!!!
-    /*          __
-     *    __/|_/ /_  __  ______ ________/|_
-     *   |    / __ \/ / / / __ `/ ___/    /
-     *  /_ __/ / / / /_/ / /_/ (__  )_ __|
-     *   |/ /_/ /_/\__,_/\__, /____/ |/
-     *                  /____/
-     */
-    val fileName = f.getName
-    val baseName = fileName.lastIndexOf('.') match {
-      case -1 => fileName
-      case dot => fileName.substring(0, dot)
-    }
-    baseName.regexSub(Eval.classCleaner) { m =>
-      "$%02x".format(m.group(0).charAt(0).toInt)
     }
   }
 
