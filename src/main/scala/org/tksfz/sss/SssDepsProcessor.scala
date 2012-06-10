@@ -11,6 +11,7 @@ import java.math.BigInteger
 import java.util.Random
 import scalaz.NonEmptyList
 import NonEmptyList._
+import scala.util.matching.Regex
 
 /**
  * AllSssWithDeps is the result of a recursive evaluation of all the dependencies of a
@@ -171,10 +172,29 @@ class SssDepsProcessor {
       case -1 => fileName
       case dot => fileName.substring(0, dot)
     }
-    import _root_.com.twitter.conversions.string._
-    baseName.regexSub(Eval.classCleaner) { m =>
+    regexSub(baseName, Eval.classCleaner) { m =>
       "$%02x".format(m.group(0).charAt(0).toInt)
     }
+  }
+  
+  /** Copied from com.twitter.conversions.string in twitter-util */
+  def regexSub(wrapped: String, re: Regex)(replace: (Regex.MatchData => String)): String = {
+    var offset = 0
+    val out = new StringBuilder()
+   
+    for (m <- re.findAllIn(wrapped).matchData) {
+      if (m.start > offset) {
+        out.append(wrapped.substring(offset, m.start))
+      }
+    
+      out.append(replace(m))
+      offset = m.end
+    }
+    
+    if (offset < wrapped.length) {
+      out.append(wrapped.substring(offset))
+    }
+    out.toString
   }
 
   
