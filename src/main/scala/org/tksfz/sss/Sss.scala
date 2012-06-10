@@ -20,54 +20,22 @@ class Sss(
   scriptFilename: String
 ) {
   
-  def run {
-    var scriptLines = Source.fromFile(scriptFilename).getLines
-    // strip the #
-    scriptLines = scriptLines dropWhile { _ startsWith "#" }
+  def run[T] {
+    val alldeps = AllSssWithDeps(new File(scriptFilename))
     
-    // return pair with list and new script
-    val depends = extractDepends(scriptLines)
-    //println(depends)
-    println(getScalaVersion)
-    
-    scriptLines = scriptLines dropWhile { _ startsWith "@depends" }
-    
-    val script = scriptLines mkString "\n"
-    val rr = ivy(depends)
+    val rr = ivy(alldeps.getAllModules)
     val libs: List[String] = rr.getAllArtifactsReports map { _.getLocalFile.getPath } toList 
     val eval = new Eval(libs)
-    eval(script)
-  }
-  
-  def getScalaVersion = scala.tools.nsc.Properties.releaseVersion
-  
-  def extractDepends(script: Iterator[String]): List[ModuleID] = {
-    val dependLines = script takeWhile { _ startsWith "@depends" }
-    val mvnArtifactRegex = """@depends\s*\(\s*"([^"]*)"\s*%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
-    val sbtArtifactRegex = """@depends\s*\(\s*"([^"]*)"\s*%%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
-    val depends: List[ModuleID] = dependLines map {
-      dependLine =>
-        dependLine match {
-          case mvnArtifactRegex(groupId, artifactId, revision) => ModuleID(groupId, artifactId, revision)
-          case sbtArtifactRegex(groupId, artifactId, revision) => ModuleID(groupId, mkScalaArtifactId(artifactId), revision)
-        }        
-    } toList;
-    depends
-  }
-  
-  def mkScalaArtifactId(artifactId: String) = {
-    artifactId + "_" + getScalaVersion.get
+    val cls = eval.compile(alldeps.getAllSssFileContents.list, alldeps.getRootClassName, true)
+    cls.getConstructor().newInstance().asInstanceOf[() => Any].apply().asInstanceOf[T]
+    //eval(script)
   }
   
   def ivy(depends: Traversable[ModuleID]) = {
     val ivy = Ivy.newInstance
-    //ivy.getLoggerEngine.pushLogger(new DefaultMessageLogger(Message.MSG_ERR))
+    ivy.getLoggerEngine.pushLogger(new DefaultMessageLogger(Message.MSG_ERR))
     ivy.configureDefault
     val md = DefaultModuleDescriptor.newDefaultInstance(ModuleRevisionId.newInstance("org.tksfz", "somescript", "0.1"))
-    /*
-    val dds = toDDD(Seq(ModuleID("org.slf4j", "slf4j-api", "1.6.4"),
-        ModuleID("com.twitter", "scalding_2.9.1", "0.5.3"),
-        ModuleID("org.slf4j", "slf4j-simple", "1.6.4"))) */
     val dds = toDDD(depends)
     addDeps(md, dds)
     val ro = new ResolveOptions

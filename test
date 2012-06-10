@@ -2,6 +2,7 @@
 @depends("org.slf4j" % "slf4j-api" % "1.6.4")
 @depends("org.slf4j" % "slf4j-simple" % "1.6.4")
 @depends("org.rogach" %% "scallop" % "0.3.9")
+@depends("lib.sss")
 
 println("hello world")
 
@@ -10,6 +11,8 @@ import org.slf4j._
 val log = LoggerFactory.getLogger(classOf[Logger])
 log.info("hello log")
 
+//syntax error
+
 import org.rogach.scallop._
 
 object Conf extends ScallopConf(List("--apples", "3")) {
@@ -17,3 +20,5 @@ object Conf extends ScallopConf(List("--apples", "3")) {
 }
 
 println(Conf.apples())
+
+println(getUrl("http://www.yahoo.com"))

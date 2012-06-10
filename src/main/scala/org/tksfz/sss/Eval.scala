@@ -33,6 +33,7 @@ import scala.tools.nsc.reporters.AbstractReporter
 import scala.tools.nsc.util.{BatchSourceFile, Position}
 import scala.util.matching.Regex
 import java.net.URL
+import scala.tools.nsc.io.VirtualFile
 
 /**
  * Evaluate a file or string and return the result.
@@ -91,39 +92,8 @@ class Eval(
       throw new RuntimeException("Unable to load scala base object from classpath (scala-library jar is missing?)", e)
   }
 
-  /**
-   * Preprocessors to run the code through before it is passed to the Scala compiler.
-   * if you want to add new resolvers, you can do so with
-   * new Eval(...) {
-   *   lazy val preprocessors = {...}
-   * }
-   */
-  protected lazy val preprocessors: Seq[Preprocessor] =
-    Seq(
-      new IncludePreprocessor(
-        Seq(
-          new ClassScopedResolver(getClass),
-          new FilesystemResolver(new File(".")),
-          new FilesystemResolver(new File("." + File.separator + "config"))
-        ) ++ (
-          Option(System.getProperty("com.twitter.util.Eval.includePath")) map { path =>
-            new FilesystemResolver(new File(path))
-          }
-        )
-      )
-    )
-
   private[this] val STYLE_INDENT = 2
   private[this] lazy val compiler = new StringCompiler(STYLE_INDENT, target)
-
-  /**
-   * run preprocessors on our string, returning a String that is the processed source
-   */
-  def sourceForString(code: String): String = {
-    preprocessors.foldLeft(code) { (acc, p) =>
-      p(acc)
-    }
-  }
 
   /**
    * write the current checksum to a file
@@ -138,7 +108,7 @@ class Eval(
    * val i: Int = new Eval()("1 + 1") // => 2
    */
   def apply[T](code: String, resetState: Boolean = true): T = {
-    val processed = sourceForString(code)
+    val processed = code
     applyProcessed(processed, resetState)
   }
 
@@ -149,7 +119,7 @@ class Eval(
     if (target.isDefined) {
       val targetDir = target.get
       val unprocessedSource = files.map { scala.io.Source.fromFile(_).mkString }.mkString("\n")
-      val processed = sourceForString(unprocessedSource)
+      val processed = unprocessedSource
       val sourceChecksum = uniqueId(processed, None)
       val checksumFile = new File(targetDir, "checksum")
       val lastChecksum = if (checksumFile.exists) {
@@ -181,7 +151,7 @@ class Eval(
    * val i: Int = new Eval()(getClass.getResourceAsStream("..."))
    */
   def apply[T](stream: InputStream): T = {
-    apply(sourceForString(Source.fromInputStream(stream).mkString))
+    apply(Source.fromInputStream(stream).mkString)
   }
 
   /**
@@ -203,27 +173,32 @@ class Eval(
     val cls = compiler(wrapCodeInClass(className, code), className, resetState)
     cls.getConstructor().newInstance().asInstanceOf[() => Any].apply().asInstanceOf[T]
   }
-
-  /**
-   * converts the given file to evaluable source.
-   * delegates to toSource(code: String)
-   */
-  def toSource(file: File): String = {
-    toSource(scala.io.Source.fromFile(file).mkString)
+  
+  def apply[T](codes: List[(File, String)], resetState: Boolean): T = {
+    val classNames = codes map { code =>
+      val sourceChecksum = uniqueId(code._2, None)
+      val cleanBaseName = fileToClassName(code._1)
+      val className = "Evaluator__%s_%s".format(cleanBaseName, sourceChecksum)
+      className
+    }
+    val codes2 = (codes zip classNames) map { codeAndClassName =>
+      (codeAndClassName._1._1, wrapCodeInClass(codeAndClassName._2, codeAndClassName._1._2)) }
+    val cls = compiler(codes2, classNames(0), resetState)
+    cls.getConstructor().newInstance().asInstanceOf[() => Any].apply().asInstanceOf[T]
+    // TODO: extends App etc.
   }
 
-  /**
-   * converts the given file to evaluable source.
-   */
-  def toSource(code: String): String = {
-    sourceForString(code)
+  def compile[T](codes: List[(File, String)], className: String, resetState: Boolean): Class[_] = {
+    val cls = compiler(codes, className, resetState)
+    cls
+    // TODO: extends App etc.
   }
 
   /**
    * Compile an entire source file into the virtual classloader.
    */
   def compile(code: String) {
-    compiler(sourceForString(code))
+    compiler(code)
   }
 
   /**
@@ -239,7 +214,7 @@ class Eval(
    * @throws CompilerException if not Eval-able.
    */
   def check(code: String) {
-    val id = uniqueId(sourceForString(code))
+    val id = uniqueId(code)
     val className = "Evaluator__" + id
     val wrappedCode = wrapCodeInClass(className, code)
     compile(wrappedCode) // may throw CompilerException
@@ -304,7 +279,7 @@ class Eval(
     "  }\n" +
     "}\n"
   }
-
+  
   /*
    * For a given FQ classname, trick the resource finder into telling us the containing jar.
    */
@@ -343,10 +318,6 @@ class Eval(
     })
   }
 
-  trait Preprocessor {
-    def apply(code: String): String
-  }
-
   trait Resolver {
     def resolvable(path: String): Boolean
     def get(path: String): InputStream
@@ -375,51 +346,6 @@ class Eval(
   }
 
   class ResolutionFailedException(message: String) extends Exception
-
-  /*
-   * This is a preprocesor that can include files by requesting them from the given classloader
-   *
-   * Thusly, if you put FS directories on your classpath (e.g. config/ under your app root,) you
-   * mix in configuration from the filesystem.
-   *
-   * @example #include file-name.scala
-   *
-   * This is the only directive supported by this preprocessor.
-   *
-   * Note that it is *not* recursive. Included files cannot have includes
-   */
-  class IncludePreprocessor(resolvers: Seq[Resolver]) extends Preprocessor {
-    def maximumRecursionDepth = 100
-
-    def apply(code: String): String =
-      apply(code, maximumRecursionDepth)
-
-    def apply(code: String, maxDepth: Int): String = {
-      val lines = code.lines map { line: String =>
-        val tokens = line.trim.split(' ')
-        if (tokens.length == 2 && tokens(0).equals("#include")) {
-          val path = tokens(1)
-          resolvers find { resolver: Resolver =>
-            resolver.resolvable(path)
-          } match {
-            case Some(r: Resolver) => {
-              // recursively process includes
-              if (maxDepth == 0) {
-                throw new IllegalStateException("Exceeded maximum recusion depth")
-              } else {
-                apply(StreamIO.buffer(r.get(path)).toString, maxDepth - 1)
-              }
-            }
-            case _ =>
-              throw new IllegalStateException("No resolver could find '%s'".format(path))
-          }
-        } else {
-          line
-        }
-      }
-      lines.mkString("\n")
-    }
-  }
 
   /**
    * Dynamic scala compiler. Lots of (slow) state is created, so it may be advantageous to keep
@@ -551,6 +477,20 @@ class Eval(
         throw new CompilerException(reporter.messages.toList)
       }
     }
+    
+    def apply(codes: List[(File, String)]) {
+      val compiler = new global.Run
+      val sourceFiles = codes map { code =>
+        val vf = new VirtualFile("(inline: " + code._1 + ")") {
+          override def container: AbstractFile = new VirtualFile("whatever")
+        }
+        new BatchSourceFile(vf, code._2)
+        }
+      compiler.compileSources(sourceFiles)
+      if (reporter.hasErrors || reporter.WARNING.count > 0) {
+        throw new CompilerException(reporter.messages.toList)
+      }
+    }
 
     /**
      * Compile a new class, load it, and return it. Thread-safe.
@@ -560,6 +500,16 @@ class Eval(
         if (resetState) reset()
         findClass(className).getOrElse {
           apply(code)
+          findClass(className).get
+        }
+      }
+    }
+    
+    def apply(codes: List[(File, String)], className: String, resetState: Boolean): Class[_] = {
+      synchronized {
+        if (resetState) reset()
+        findClass(className).getOrElse {
+          apply(codes)
           findClass(className).get
         }
       }
