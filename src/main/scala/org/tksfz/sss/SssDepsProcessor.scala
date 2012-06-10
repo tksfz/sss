@@ -21,23 +21,21 @@ import NonEmptyList._
  * AllSssWithDeps is like a sss "project"
  */
 class AllSssWithDeps(
-  val sssfiles: NonEmptyList[(File, ContentsWithDeps)]
+    val sssfiles: NonEmptyList[ContentsWithDeps]
 ) {
   
   def getAllSssFiles: NonEmptyList[File] = {
-    sssfiles map { _._1 }
+    sssfiles map { _.file }
   }
   
   def getAllModules: List[ModuleID] = {
-    sssfiles.list.flatMap { _._2.modules }
+    sssfiles.list.flatMap { _.modules }
   }
   
-  def getRootClassName = {
-    sssfiles.head._2.className.get
-  }
+  def getRootClassName = sssfiles.head.className
   
   def getAllSssFileContents: NonEmptyList[(File, String)] = {
-    sssfiles map { sssfile => (sssfile._1, sssfile._2.newcontents) }
+    sssfiles map { sssfile => (sssfile.file, sssfile.contents) }
   }
   
   override def toString = sssfiles.toString
@@ -54,7 +52,7 @@ class AllSssWithDeps(
  * There are a few different kinds of resources:
  * - .scala files
  * - .sss files
- * - jar files
+ * - .jar files
  * - classes dirs?
  * - maven/sbt artifact id's
  * 
@@ -86,10 +84,10 @@ object AllSssWithDeps {
       }
       unprocessedFiles = newUnprocessedFiles
     }
-    val tailClassNames = filesToContents.values.tail map { _.className.get }
+    val tailClassNames = filesToContents.values.tail map { _.className }
     var rootContents = filesToContents(rootfile)
-    rootContents = rootContents.copy(newcontents = getRootImports(tailClassNames) + "\n" + rootContents.newcontents)
-    new AllSssWithDeps(nel((rootfile -> rootContents), filesToContents.toList.tail))
+    rootContents = rootContents.copy(contents = getRootImports(tailClassNames) + "\n" + rootContents.contents)
+    new AllSssWithDeps(nel(rootContents, filesToContents.values.toList.tail))
   }
 
   def getRootImports(classNames: Iterable[String]) = {
@@ -106,16 +104,16 @@ class SssDepsProcessor {
 
   def process(sssfile: File, isRoot: Boolean): ContentsWithDeps = {
     var scriptLines = Source.fromFile(sssfile).getLines
-    // strip the #
-    scriptLines = scriptLines dropWhile { _ startsWith "#" }
+    scriptLines = scriptLines dropWhile { _ startsWith "#" } // strip the #
     
-    // return pair with list and new script
-    var depends = extractDepends(scriptLines)
-    depends = wrapResult(sssfile, depends, isRoot)
-    depends
+    val (modules, sssfiles) = extractDepends(scriptLines)
+    var script = scriptLines mkString "\n"
+    val className = getClassName(sssfile, script)
+    script = wrapScript(className, script, isRoot)
+    ContentsWithDeps(sssfile, script, className, modules, sssfiles)
   }
   
-  def extractDepends(script: Iterator[String]): ContentsWithDeps = {
+  private def extractDepends(script: Iterator[String]): (List[ModuleID], List[File]) = {
     val dependLines = script takeWhile { _ startsWith "@depends" }
     val mvnArtifactRegex = """@depends\s*\(\s*"([^"]*)"\s*%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
     val sbtArtifactRegex = """@depends\s*\(\s*"([^"]*)"\s*%%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
@@ -132,14 +130,11 @@ class SssDepsProcessor {
             sssfiles += new File(filename)
         }
     }
-    val newscript = script dropWhile { _ startsWith "@depends" } mkString "\n"
-    new ContentsWithDeps(newscript, None, modules toList, sssfiles toList)
+    (modules toList, sssfiles toList)
   }
   
-  def wrapResult(file: File, c: ContentsWithDeps, isRoot: Boolean): ContentsWithDeps = {
-    val className = getClassName(file, c.newcontents)
-    val newscript = if (isRoot) wrapCodeInClass(className, c.newcontents) else wrapCodeInObject(className, c.newcontents)
-    new ContentsWithDeps(newscript, Some(className), c.modules, c.sssfiles)
+  def wrapScript(className: String, script: String, isRoot: Boolean): String = {
+    if (isRoot) wrapCodeInClass(className, script) else wrapCodeInObject(className, script)
   }
   
   def mkscript(file: File, script: String) = {
@@ -207,13 +202,14 @@ class SssDepsProcessor {
 }
 
 trait PreprocessorResult {
-  val newcontents: String
+  val file: File
+  val contents: String
 }
 
 case class ContentsWithDeps(
-    override val newcontents: String,
-    className: Option[String],
-    val modules: List[ModuleID],
-    val sssfiles: List[File]
-) extends PreprocessorResult {
-}
+    override val file: File,
+    override val contents: String,
+    className: String,
+    modules: List[ModuleID],
+    sssfiles: List[File]
+) extends PreprocessorResult
