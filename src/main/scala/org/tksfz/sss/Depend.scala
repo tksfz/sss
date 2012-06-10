@@ -12,8 +12,6 @@ final class GroupID private[sss] (groupID: String)
 	{
 		new GroupArtifactID(groupID, artifactID)
 	}
-
-	private[this] def deprecationMessage = """Use the cross method on the constructed ModuleID.  For example: ("a" % "b" % "1").cross(...)"""
 }
 final class GroupArtifactID private[sss] (groupID: String, artifactID: String)
 {
@@ -24,6 +22,3 @@ final class GroupArtifactID private[sss] (groupID: String, artifactID: String)
 }
 
 case class ModuleID(groupId: String, artifactId: String, revision: String)
-
-class depend(depend: ModuleID) extends annotation.StaticAnnotation {
-}

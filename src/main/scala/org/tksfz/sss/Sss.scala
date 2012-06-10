@@ -17,7 +17,7 @@ import org.apache.ivy.util.DefaultMessageLogger
 import org.apache.ivy.util.Message
 
 class Sss(
-  scriptFilename: String
+    scriptFilename: String
 ) {
   
   def run[T](args: Array[String]) {
