@@ -248,35 +248,6 @@ class Eval(
     })
   }
 
-  trait Resolver {
-    def resolvable(path: String): Boolean
-    def get(path: String): InputStream
-  }
-
-  class FilesystemResolver(root: File) extends Resolver {
-    private[this] def file(path: String): File =
-      new File(root.getAbsolutePath + File.separator + path)
-
-    def resolvable(path: String): Boolean =
-      file(path).exists
-
-    def get(path: String): InputStream =
-      new FileInputStream(file(path))
-  }
-
-  class ClassScopedResolver(clazz: Class[_]) extends Resolver {
-    private[this] def quotePath(path: String) =
-      "/" + path
-
-    def resolvable(path: String): Boolean =
-      clazz.getResourceAsStream(quotePath(path)) != null
-
-    def get(path: String): InputStream =
-      clazz.getResourceAsStream(quotePath(path))
-  }
-
-  class ResolutionFailedException(message: String) extends Exception
-
   /**
    * Dynamic scala compiler. Lots of (slow) state is created, so it may be advantageous to keep
    * around one of these and reuse it.
