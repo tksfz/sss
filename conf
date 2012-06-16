@@ -1,13 +1,14 @@
--injars      sss_2.9.1-0.1.jar
--injars      /home/thom/.sbt/boot/scala-2.9.1/lib/scala-library.jar
--injars      /home/thom/.sbt/boot/scala-2.9.1/lib/scala-compiler.jar
--injars      /home/thom/.ivy2/cache/com.twitter/util-eval_2.9.1/jars/util-eval_2.9.1-4.0.1.jar
--injars      /home/thom/.ivy2/cache/com.twitter/util-core_2.9.1/jars/util-core_2.9.1-4.0.1.jar
+-injars      target/scala-2.9.2/sss_2.9.2-0.1.jar
+-injars      /home/thom/.sbt/boot/scala-2.9.2/lib/scala-library.jar
+-injars      /home/thom/.sbt/boot/scala-2.9.2/lib/scala-compiler.jar
+-injars      /home/thom/.ivy2/cache/org.scalaz/scalaz-core_2.9.2/jars/scalaz-core_2.9.2-6.0.4.jar
+-injars      /home/thom/.ivy2/cache/org.apache.ivy/ivy/jars/ivy-2.3.0-rc1.jar
 -outjars     out.jar
 -libraryjars /usr/lib/jvm/java-6-openjdk/jre/lib/rt.jar
 
 -dontwarn scala.**
 -dontwarn com.twitter.concurrent.*
+-dontwarn org.apache.**
 
 -dontshrink
 -dontoptimize
