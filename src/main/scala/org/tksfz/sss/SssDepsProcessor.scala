@@ -115,10 +115,10 @@ class SssDepsProcessor {
   }
   
   private def extractDepends(script: Iterator[String]): (List[ModuleID], List[File]) = {
-    val dependLines = script takeWhile { _ startsWith "@depends" }
-    val mvnArtifactRegex = """@depends\s*\(\s*"([^"]*)"\s*%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
-    val sbtArtifactRegex = """@depends\s*\(\s*"([^"]*)"\s*%%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
-    val sssFileRegex = """@depends\s*\(\s*"([^"]*)"\s*\)""".r
+    val dependLines = script takeWhile { line => line.startsWith("@depend") || line.startsWith("@include") }
+    val mvnArtifactRegex = """@depend\s*\(\s*"([^"]*)"\s*%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
+    val sbtArtifactRegex = """@depend\s*\(\s*"([^"]*)"\s*%%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
+    val sssFileRegex = """@include\s*\(\s*"([^"]*)"\s*\)""".r
     val modules = ListBuffer[ModuleID]()
     val sssfiles = ListBuffer[File]()
     for(dependLine <- dependLines) {

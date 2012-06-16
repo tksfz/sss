@@ -1,8 +1,8 @@
-#!/home/thom/sss/sss2
-@depends("org.slf4j" % "slf4j-api" % "1.6.4")
-@depends("org.slf4j" % "slf4j-simple" % "1.6.4")
-@depends("org.rogach" %% "scallop" % "0.3.9")
-@depends("lib.sss")
+#!/home/thom/sss/sss
+@depend("org.slf4j" % "slf4j-api" % "1.6.4")
+@depend("org.slf4j" % "slf4j-simple" % "1.6.4")
+@depend("org.rogach" %% "scallop" % "0.3.9")
+@include("lib.sss")
 
 println("hello world")
 

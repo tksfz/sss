@@ -1,2 +1,0 @@
-#!/bin/sh
-java -jar target/scala-2.9.1/out.jar "$@"
