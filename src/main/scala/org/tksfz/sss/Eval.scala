@@ -32,6 +32,7 @@ import scala.tools.nsc.util.{BatchSourceFile, Position}
 import scala.util.matching.Regex
 import java.net.URL
 import scala.tools.nsc.io.VirtualFile
+import scala.tools.nsc.util.ScriptSourceFile
 
 /**
  * Evaluate a file or string and return the result.
@@ -41,6 +42,14 @@ object Eval extends Eval {
   private val jvmId = java.lang.Math.abs(new Random().nextInt())
   val classCleaner: Regex = "\\W".r
 }
+
+  trait PreprocessedFile {
+    val file: File
+    val contents: String
+    val startingLineOffset: Int
+  }
+
+
 
 /**
  * Evaluates files, strings, or input streams as Scala code, and returns the result.
@@ -140,8 +149,12 @@ class Eval(
   def compile[T](codes: List[(File, String)], className: String, resetState: Boolean): Class[_] = {
     val cls = compiler(codes, className, resetState)
     cls
-    // TODO: extends App etc.
   }
+  
+  def compileAndGet(ppfs: List[_ <: PreprocessedFile], className: String, resetState: Boolean): Class[_] = {
+    val cls = compiler.compileAndGet(ppfs, className, resetState)
+    cls
+  } 
 
   /**
    * Compile an entire source file into the virtual classloader.
@@ -247,7 +260,7 @@ class Eval(
       Nil
     })
   }
-
+  
   /**
    * Dynamic scala compiler. Lots of (slow) state is created, so it may be advantageous to keep
    * around one of these and reuse it.
@@ -279,7 +292,7 @@ class Eval(
           case WARNING => "warning: "
           case _ => ""
         }
-        messages += (severityName + "line " + (pos.line - lineOffset) + ": " + message) ::
+        messages += (severityName + "file " + pos.source + ", line " + (pos.line - lineOffset) + ": " + message) ::
           (if (pos.isDefined) {
             pos.inUltimateSource(pos.source).lineContent.stripLineEnd ::
               (" " * (pos.column - 1) + "^") ::
@@ -393,6 +406,23 @@ class Eval(
       }
     }
 
+    def compile(ppfs: List[_ <: PreprocessedFile]) {
+      val compiler = new global.Run
+      val sourceFiles = ppfs map { ppf =>
+            val vf = new VirtualFile("(inline: " + ppf.file + ")") {
+          override def container: AbstractFile = new VirtualFile("whatever")
+            }
+            val underlying = new BatchSourceFile(vf, ppf.contents)
+            new ScriptSourceFile(underlying, ppf.contents.toArray, ppf.startingLineOffset) {
+              override def isSelfContained = true
+            }
+        }
+      compiler.compileSources(sourceFiles)
+      if (reporter.hasErrors || reporter.WARNING.count > 0) {
+        throw new CompilerException(reporter.messages.toList)
+      }
+    }
+    
     /**
      * Compile a new class, load it, and return it. Thread-safe.
      */
@@ -411,6 +441,16 @@ class Eval(
         if (resetState) reset()
         findClass(className).getOrElse {
           apply(codes)
+          findClass(className).get
+        }
+      }
+    }
+    
+    def compileAndGet(ppfs: List[_ <: PreprocessedFile], className: String, resetState: Boolean): Class[_] = {
+      synchronized {
+        if (resetState) reset()
+        findClass(className).getOrElse {
+          compile(ppfs)
           findClass(className).get
         }
       }

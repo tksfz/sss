@@ -11,7 +11,7 @@ import org.slf4j._
 val log = LoggerFactory.getLogger(classOf[Logger])
 log.info("hello log")
 
-//syntax error
+syntax error
 
 import org.rogach.scallop._
 

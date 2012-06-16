@@ -107,14 +107,14 @@ class SssDepsProcessor {
     var scriptLines = Source.fromFile(sssfile).getLines
     scriptLines = scriptLines dropWhile { _ startsWith "#" } // strip the #
     
-    val (modules, sssfiles) = extractDepends(scriptLines)
+    val (headerLength, modules, sssfiles) = extractDepends(scriptLines)
     var script = scriptLines mkString "\n"
     val className = getClassName(sssfile, script)
     script = wrapScript(className, script, isRoot)
-    ContentsWithDeps(sssfile, script, className, modules, sssfiles)
+    ContentsWithDeps(sssfile, script, headerLength, className, modules, sssfiles)
   }
   
-  private def extractDepends(script: Iterator[String]): (List[ModuleID], List[File]) = {
+  private def extractDepends(script: Iterator[String]): (Int, List[ModuleID], List[File]) = {
     val dependLines = script takeWhile { line => line.startsWith("@depend") || line.startsWith("@include") }
     val mvnArtifactRegex = """@depend\s*\(\s*"([^"]*)"\s*%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
     val sbtArtifactRegex = """@depend\s*\(\s*"([^"]*)"\s*%%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
@@ -131,7 +131,7 @@ class SssDepsProcessor {
             sssfiles += new File(filename)
         }
     }
-    (modules toList, sssfiles toList)
+    (dependLines.size, modules toList, sssfiles toList)
   }
   
   def wrapScript(className: String, script: String, isRoot: Boolean): String = {
@@ -222,6 +222,8 @@ trait PreprocessorResult {
 case class ContentsWithDeps(
     override val file: File,
     override val contents: String,
+    /** how many lines come before contents in the real source file */
+    startingLineOffset: Int,
     className: String,
     modules: List[ModuleID],
     sssfiles: List[File]

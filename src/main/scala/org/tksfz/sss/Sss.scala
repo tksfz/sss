@@ -26,6 +26,12 @@ class Sss(
     val libs: List[String] = rr.getAllArtifactsReports map { _.getLocalFile.getPath } toList 
     val eval = new Eval(libs)
     val cls = eval.compile(alldeps.getAllSssFileContents, alldeps.getRootClassName, true)
+    val ppfs = (alldeps.sssfiles map { sssfile => new PreprocessedFile {
+      override val file = sssfile.file
+      override val contents = sssfile.contents
+      override val startingLineOffset= sssfile.startingLineOffset }
+    }).list
+    //val cls2 = eval.compileAndGet(ppfs, alldeps.getRootClassName, true)
     runAppClass(cls, args)
   }
   
