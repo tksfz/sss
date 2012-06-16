@@ -32,6 +32,8 @@ import scala.tools.nsc.util.{BatchSourceFile, Position}
 import scala.util.matching.Regex
 import java.net.URL
 import scala.tools.nsc.io.VirtualFile
+import scala.tools.nsc.util.ScriptSourceFile
+import scala.tools.nsc.util.SourceFile
 
 /**
  * Evaluate a file or string and return the result.
@@ -40,6 +42,12 @@ import scala.tools.nsc.io.VirtualFile
 object Eval extends Eval {
   private val jvmId = java.lang.Math.abs(new Random().nextInt())
   val classCleaner: Regex = "\\W".r
+}
+
+trait PreprocessedFile {
+  val file: File
+  val contents: String
+  val startingLineOffset: Int
 }
 
 /**
@@ -137,11 +145,10 @@ class Eval(
     cls.getConstructor().newInstance().asInstanceOf[() => Any].apply().asInstanceOf[T]
   }
   
-  def compile[T](codes: List[(File, String)], className: String, resetState: Boolean): Class[_] = {
-    val cls = compiler(codes, className, resetState)
+  def compileAndGet(ppfs: List[_ <: PreprocessedFile], className: String, resetState: Boolean): Class[_] = {
+    val cls = compiler.compileAndGet(ppfs, className, resetState)
     cls
-    // TODO: extends App etc.
-  }
+  } 
 
   /**
    * Compile an entire source file into the virtual classloader.
@@ -247,7 +254,12 @@ class Eval(
       Nil
     })
   }
-
+  
+  trait OffsetSourceFile {
+    this: SourceFile =>
+      val startingLineOffset: Int
+  }
+  
   /**
    * Dynamic scala compiler. Lots of (slow) state is created, so it may be advantageous to keep
    * around one of these and reuse it.
@@ -279,7 +291,8 @@ class Eval(
           case WARNING => "warning: "
           case _ => ""
         }
-        messages += (severityName + "line " + (pos.line - lineOffset) + ": " + message) ::
+        val startingLineOffset = pos.source match { case osf: OffsetSourceFile => osf.startingLineOffset case _ => lineOffset }
+        messages += (severityName + "file " + pos.source + ", line " + (pos.line + startingLineOffset) + ": " + message) ::
           (if (pos.isDefined) {
             pos.inUltimateSource(pos.source).lineContent.stripLineEnd ::
               (" " * (pos.column - 1) + "^") ::
@@ -379,20 +392,22 @@ class Eval(
       }
     }
     
-    def apply(codes: List[(File, String)]) {
+    def compile(ppfs: List[_ <: PreprocessedFile]) {
       val compiler = new global.Run
-      val sourceFiles = codes map { code =>
-        val vf = new VirtualFile("(inline: " + code._1 + ")") {
-          override def container: AbstractFile = new VirtualFile("whatever")
+      val sourceFiles = ppfs map { ppf =>       
+        val vf = new VirtualFile("(inline: " + ppf.file + ")") {
+            override def container: AbstractFile = new VirtualFile("whatever")
         }
-        new BatchSourceFile(vf, code._2)
+        new BatchSourceFile(vf, ppf.contents) with OffsetSourceFile {
+          override val startingLineOffset = ppf.startingLineOffset
         }
+      }
       compiler.compileSources(sourceFiles)
       if (reporter.hasErrors || reporter.WARNING.count > 0) {
         throw new CompilerException(reporter.messages.toList)
       }
     }
-
+    
     /**
      * Compile a new class, load it, and return it. Thread-safe.
      */
@@ -406,11 +421,11 @@ class Eval(
       }
     }
     
-    def apply(codes: List[(File, String)], className: String, resetState: Boolean): Class[_] = {
+    def compileAndGet(ppfs: List[_ <: PreprocessedFile], className: String, resetState: Boolean): Class[_] = {
       synchronized {
         if (resetState) reset()
         findClass(className).getOrElse {
-          apply(codes)
+          compile(ppfs)
           findClass(className).get
         }
       }

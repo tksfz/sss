@@ -25,8 +25,14 @@ class Sss(
     val rr = ivy(alldeps.getAllModules)
     val libs: List[String] = rr.getAllArtifactsReports map { _.getLocalFile.getPath } toList 
     val eval = new Eval(libs)
-    val cls = eval.compile(alldeps.getAllSssFileContents, alldeps.getRootClassName, true)
-    runAppClass(cls, args)
+    val ppfs = (alldeps.sssfiles map { sssfile => new PreprocessedFile {
+      override val file = sssfile.file
+      override val contents = sssfile.contents
+      override val startingLineOffset = sssfile.startingLineOffset }
+    }).list
+    println(ppfs map { ppf => (ppf.file, ppf.startingLineOffset) })
+    val cls2 = eval.compileAndGet(ppfs, alldeps.getRootClassName, true)
+    runAppClass(cls2, args)
   }
   
   private def runAppClass(clazz: Class[_], args: Array[String]) = clazz.getConstructor().newInstance().asInstanceOf[App].main(args)
