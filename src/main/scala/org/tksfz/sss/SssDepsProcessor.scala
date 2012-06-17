@@ -133,26 +133,27 @@ class SssDepsProcessor {
   }
   
   private def extractDepends(script: Iterable[String]): (Int, List[ModuleID], List[File]) = {
-    val dependLines = script takeWhile { isValidHeaderLine(_) } toList
+    val headerLines = script takeWhile { isValidHeaderLine(_) } toList
     val MvnArtifactRegex = (DEPEND_DIRECTIVE + """\s*\(\s*"([^"]*)"\s*%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""").r
     val SbtArtifactRegex = (DEPEND_DIRECTIVE + """\s*\(\s*"([^"]*)"\s*%%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""").r
     val SssFileRegex = (INCLUDE_DIRECTIVE + """\s*\(\s*"([^"]*)"\s*\)""").r
     val modules = ListBuffer[ModuleID]()
     val sssfiles = ListBuffer[File]()
-    for(dependLine <- dependLines) {
+    for(dependLine <- headerLines) {
       dependLine match {
-          case MvnArtifactRegex(groupId, artifactId, revision) =>
-            modules += ModuleID(groupId, artifactId, revision)
-          case SbtArtifactRegex(groupId, artifactId, revision) =>
-            modules += ModuleID(groupId, mkScalaArtifactId(artifactId), revision)
-          case SssFileRegex(filename) =>
-            sssfiles += new File(filename)
-        }
+        case "" => 
+        case MvnArtifactRegex(groupId, artifactId, revision) =>
+          modules += ModuleID(groupId, artifactId, revision)
+        case SbtArtifactRegex(groupId, artifactId, revision) =>
+          modules += ModuleID(groupId, mkScalaArtifactId(artifactId), revision)
+        case SssFileRegex(filename) =>
+          sssfiles += new File(filename)
+      }
     }
-    (dependLines.size, modules toList, sssfiles toList)
+    (headerLines.size, modules toList, sssfiles toList)
   }
   
-  private def isValidHeaderLine(line: String) = { ALL_DIRECTIVES exists { line.trim.startsWith _ } } 
+  private def isValidHeaderLine(line: String) = { (ALL_DIRECTIVES exists { line.trim.startsWith _ }) || line.trim.isEmpty } 
   
   private def wrapScript(className: String, script: String, isRoot: Boolean): String = {
     if (isRoot) wrapCodeInApp(className, script) else wrapCodeInObject(className, script)
