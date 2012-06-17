@@ -16,8 +16,8 @@ apples.sss:
 
 ```scala
 #!/home/user/bin/sss
-@depend("org.rogach" %% "scallop" % "0.3.9")
-@depend("net.databinder" %% "dispatch-http" % "0.4.1")
+@require("org.rogach" %% "scallop" % "0.3.9")
+@require("net.databinder" %% "dispatch-http" % "0.8.8")
 
 import org.rogach.scallop._
 
