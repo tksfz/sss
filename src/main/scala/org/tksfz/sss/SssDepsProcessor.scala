@@ -87,7 +87,9 @@ object AllSssWithDeps {
     }
     val tailClassNames = filesToContents.values.tail map { _.className }
     var rootContents = filesToContents(rootfile)
-    rootContents = rootContents.copy(contents = getRootImports(tailClassNames) + "\n" + rootContents.contents)
+    rootContents = rootContents.copy(
+        contents = getRootImports(tailClassNames) + "\n" + rootContents.contents,
+        startingLineOffset = rootContents.startingLineOffset - tailClassNames.size)
     new AllSssWithDeps(nel(rootContents, filesToContents.values.toList.tail))
   }
 
@@ -96,7 +98,6 @@ object AllSssWithDeps {
   }
 }
 
-
 /**
  * Processes a sss file to extract dependencies
  */
@@ -104,17 +105,26 @@ class SssDepsProcessor {
   private val jvmId = java.lang.Math.abs(new Random().nextInt())
 
   def process(sssfile: File, isRoot: Boolean): ContentsWithDeps = {
-    var scriptLines = Source.fromFile(sssfile).getLines
-    scriptLines = scriptLines dropWhile { _ startsWith "#" } // strip the #
+    val scriptLines1 = Source.fromFile(sssfile).getLines.toList
+    var (shebangLength, scriptLines) = stripFirstShebang(scriptLines1)
     
     val (headerLength, modules, sssfiles) = extractDepends(scriptLines)
-    var script = scriptLines mkString "\n"
+    var script = scriptLines drop(headerLength) mkString "\n"
     val className = getClassName(sssfile, script)
     script = wrapScript(className, script, isRoot)
-    ContentsWithDeps(sssfile, script, headerLength, className, modules, sssfiles)
+    ContentsWithDeps(sssfile, script, headerLength + shebangLength, className, modules, sssfiles)
   }
   
-  private def extractDepends(script: Iterator[String]): (Int, List[ModuleID], List[File]) = {
+  // @return pair of (headerLength, stripped body)
+  private def stripFirstShebang(lines: List[String]) = {
+    if (!lines.isEmpty && lines(0).startsWith("#!")) {
+      (1, lines.tail)
+    } else {
+      (0, lines)
+    }
+  }
+  
+  private def extractDepends(script: Iterable[String]): (Int, List[ModuleID], List[File]) = {
     val dependLines = script takeWhile { line => line.startsWith("@depend") || line.startsWith("@include") } toList
     val mvnArtifactRegex = """@depend\s*\(\s*"([^"]*)"\s*%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
     val sbtArtifactRegex = """@depend\s*\(\s*"([^"]*)"\s*%%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
