@@ -39,12 +39,13 @@ class Sss(
   
   def ivy(depends: Traversable[ModuleID]) = {
     val ivy = Ivy.newInstance
-    ivy.getLoggerEngine.pushLogger(new DefaultMessageLogger(Message.MSG_ERR))
+    Message.setDefaultLogger(new DefaultMessageLogger(Message.MSG_ERR))
     ivy.configureDefault
     val md = DefaultModuleDescriptor.newDefaultInstance(ModuleRevisionId.newInstance("org.tksfz", "somescript", "0.1"))
     val dds = toDDD(depends)
     addDeps(md, dds)
     val ro = new ResolveOptions
+    //ro.setLog(LogOptions.LOG_QUIET)
     val resolveReport = ivy.resolve(md, ro)
     //val rr = ivy.retrieve(md.getModuleRevisionId, "lib/[conf]/[artifact].[ext]", new RetrieveOptions)
     resolveReport
