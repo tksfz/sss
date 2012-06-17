@@ -18,7 +18,6 @@ apples.sss:
 #!/home/user/bin/sss
 @depend("org.rogach" %% "scallop" % "0.3.9")
 @depend("net.databinder" %% "dispatch-http" % "0.4.1")
-!#
 
 import org.rogach.scallop._
 
