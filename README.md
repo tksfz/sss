@@ -1,3 +1,5 @@
+[Usage]: https://github.com/tksfz/sss/wiki/usage
+
 sss
 ===
 sss is simple scripting for Scala _with dependencies_.  It lets you write simple scripts in Scala
@@ -37,7 +39,7 @@ You have 5 apples
 ```
 
 When your script runs, any dependencies will be downloaded as necessary, then the script code will be wrapped,
-compiled and executed.  Full usage here.
+compiled and executed.  Full [Usage] here.
 
 Quick Install
 =============
