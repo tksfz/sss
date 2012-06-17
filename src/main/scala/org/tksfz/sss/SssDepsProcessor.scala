@@ -98,10 +98,18 @@ object AllSssWithDeps {
   }
 }
 
+object SssDepsProcessor {
+  val HEADER_DIRECTIVE_PREFIX = "@"
+  val DEPEND_DIRECTIVE = HEADER_DIRECTIVE_PREFIX + "depend"
+  val INCLUDE_DIRECTIVE = HEADER_DIRECTIVE_PREFIX + "include"
+  val ALL_DIRECTIVES = Set(DEPEND_DIRECTIVE, INCLUDE_DIRECTIVE)
+}
 /**
  * Processes a sss file to extract dependencies
  */
 class SssDepsProcessor {
+  import SssDepsProcessor._
+  
   private val jvmId = java.lang.Math.abs(new Random().nextInt())
 
   def process(sssfile: File, isRoot: Boolean): ContentsWithDeps = {
@@ -125,26 +133,28 @@ class SssDepsProcessor {
   }
   
   private def extractDepends(script: Iterable[String]): (Int, List[ModuleID], List[File]) = {
-    val dependLines = script takeWhile { line => line.startsWith("@depend") || line.startsWith("@include") } toList
-    val mvnArtifactRegex = """@depend\s*\(\s*"([^"]*)"\s*%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
-    val sbtArtifactRegex = """@depend\s*\(\s*"([^"]*)"\s*%%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""".r
-    val sssFileRegex = """@include\s*\(\s*"([^"]*)"\s*\)""".r
+    val dependLines = script takeWhile { isValidHeaderLine(_) } toList
+    val MvnArtifactRegex = (DEPEND_DIRECTIVE + """\s*\(\s*"([^"]*)"\s*%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""").r
+    val SbtArtifactRegex = (DEPEND_DIRECTIVE + """\s*\(\s*"([^"]*)"\s*%%\s*"([^"]*)"\s*%\s*"([^"]*)"\s*\)""").r
+    val SssFileRegex = (INCLUDE_DIRECTIVE + """\s*\(\s*"([^"]*)"\s*\)""").r
     val modules = ListBuffer[ModuleID]()
     val sssfiles = ListBuffer[File]()
     for(dependLine <- dependLines) {
       dependLine match {
-          case mvnArtifactRegex(groupId, artifactId, revision) =>
+          case MvnArtifactRegex(groupId, artifactId, revision) =>
             modules += ModuleID(groupId, artifactId, revision)
-          case sbtArtifactRegex(groupId, artifactId, revision) =>
+          case SbtArtifactRegex(groupId, artifactId, revision) =>
             modules += ModuleID(groupId, mkScalaArtifactId(artifactId), revision)
-          case sssFileRegex(filename) =>
+          case SssFileRegex(filename) =>
             sssfiles += new File(filename)
         }
     }
     (dependLines.size, modules toList, sssfiles toList)
   }
   
-  def wrapScript(className: String, script: String, isRoot: Boolean): String = {
+  private def isValidHeaderLine(line: String) = { ALL_DIRECTIVES exists { line.trim.startsWith _ } } 
+  
+  private def wrapScript(className: String, script: String, isRoot: Boolean): String = {
     if (isRoot) wrapCodeInApp(className, script) else wrapCodeInObject(className, script)
   }
   
