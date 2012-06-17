@@ -30,7 +30,6 @@ class Sss(
       override val contents = sssfile.contents
       override val startingLineOffset = sssfile.startingLineOffset }
     }).list
-    println(ppfs map { ppf => (ppf.file, ppf.startingLineOffset) })
     val cls2 = eval.compileAndGet(ppfs, alldeps.getRootClassName, true)
     runAppClass(cls2, args)
   }
