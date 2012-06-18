@@ -1,4 +1,5 @@
 [Usage]: https://github.com/tksfz/sss/wiki/usage
+[Download]: https://github.com/downloads/tksfz/sss/sss-launch.jar
 
 sss
 ===
@@ -43,7 +44,7 @@ compiled and executed.  Full [Usage] here.
 Quick Install
 =============
 
-Download sss-launch.jar and place it in ```~/bin```.
+Download sss-launch.jar[Download] and place it in ```~/bin```.
 
 Create a script to run the jar by entering the following in ~/bin/sss:
 
