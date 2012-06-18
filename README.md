@@ -1,3 +1,6 @@
+[Usage]: https://github.com/tksfz/sss/wiki/usage
+[Download]: https://github.com/downloads/tksfz/sss/sss-launch.jar
+
 sss
 ===
 sss is simple scripting for Scala _with dependencies_.  It lets you write simple scripts in Scala
@@ -36,16 +39,17 @@ You have 5 apples
 ```
 
 When your script runs, any dependencies will be downloaded as necessary, then the script code will be wrapped,
-compiled and executed.  Full usage here.
+compiled and executed.  Full [Usage] here.
 
 Quick Install
 =============
 
-Download sss-launch.jar and place it in ```~/bin```.
+Download [sss-launch.jar][Download] and place it in ```~/bin```.
 
 Create a script to run the jar by entering the following in ~/bin/sss:
 
 ```
+#!/bin/sh
 java -Xmx1024M -jar `dirname $0`/sss-launch.jar "$@"
 ```
 
@@ -56,4 +60,5 @@ Notes
 =====
 
 The implementation of sss uses code from twitter util-eval and sbt.  It does not import them as libraries in order
-to help keep the launcher as small as possible.
+to help keep the launcher as small as possible.  Sbt and Scala itself have the ability to run programs as scripts.
+This project provides a different feature set and interface.
