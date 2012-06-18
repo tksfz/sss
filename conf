@@ -3,7 +3,7 @@
 -injars      /home/thom/.sbt/boot/scala-2.9.2/lib/scala-compiler.jar
 -injars      /home/thom/.ivy2/cache/org.scalaz/scalaz-core_2.9.2/jars/scalaz-core_2.9.2-6.0.4.jar
 -injars      /home/thom/.ivy2/cache/org.apache.ivy/ivy/jars/ivy-2.3.0-rc1.jar
--outjars     out.jar
+-outjars     sss-launch.jar
 -libraryjars /usr/lib/jvm/java-6-openjdk/jre/lib/rt.jar
 
 -dontwarn scala.**
