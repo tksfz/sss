@@ -58,4 +58,5 @@ Notes
 =====
 
 The implementation of sss uses code from twitter util-eval and sbt.  It does not import them as libraries in order
-to help keep the launcher as small as possible.
+to help keep the launcher as small as possible.  Sbt and Scala itself have the ability to run programs as scripts.
+This project provides a different feature set and interface.
