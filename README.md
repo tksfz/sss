@@ -49,6 +49,7 @@ Download [sss-launch.jar][Download] and place it in ```~/bin```.
 Create a script to run the jar by entering the following in ~/bin/sss:
 
 ```
+#!/bin/sh
 java -Xmx1024M -jar `dirname $0`/sss-launch.jar "$@"
 ```
 
