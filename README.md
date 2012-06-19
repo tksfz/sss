@@ -63,4 +63,4 @@ This project provides a different feature set and interface.
 
 ## Contact
 
-Join the [Mailing List] to discuss the project.  Please send feature requests, ideas, and bug reports to sss@tksfz.org.
+Join the [Mailing List] to discuss the project.  Please send feature requests, ideas, and bug reports to sss at-sign tksfz.org.
